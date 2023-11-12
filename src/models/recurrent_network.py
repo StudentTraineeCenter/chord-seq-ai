@@ -81,6 +81,9 @@ class Main:
 
         Returns:
             torch.Tensor: A tensor of shape (num_sequences, max_length + 2) containing the generated sequences.
+
+        Raises:
+            ValueError: If an invalid max_length is provided.
         """
 
         if max_length > 254:
@@ -99,8 +102,16 @@ class Main:
             )
             for i in range(max_length):
                 y_pred = self.model.predict_next(x[:, : i + 1])
-                # Zero out the probability for the same as the previous chord
-                y_pred[:, x[:, i]] = -torch.inf
+
+                # Zero out the probability for the same as the previous chord and start of sequence token
+                for batch_idx, prev_chord in enumerate(x[:, i]):
+                    y_pred[batch_idx, prev_chord] = -torch.inf
+                y_pred[:, self.VOCAB_SIZE - 2] = -torch.inf
+
+                # Zero out the probability for the end of sequence token
+                if i == 0:
+                    y_pred[:, self.VOCAB_SIZE - 1] = -torch.inf
+
                 # Sample from the distribution
                 y_pred = F.softmax(y_pred, dim=-1) ** (1 / temperature)
                 x[:, i + 1] = y_pred.multinomial(1).squeeze(1)

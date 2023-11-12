@@ -180,6 +180,9 @@ class Main:
 
         Returns:
             torch.Tensor: A tensor of shape (VOCAB_SIZE,) containing the probability distribution of the next chord.
+
+        Raises:
+            ValueError: If the style vector is not of the correct size.
         """
 
         x_len = len(x)
@@ -212,7 +215,7 @@ class Main:
             torch.Tensor: A tensor of shape (num_sequences, max_length + 2) containing the generated sequences.
 
         Raises:
-            ValueError: If max_length is greater than 254.
+            ValueError: If an invalid max_length is provided.
         """
 
         if max_length > 254:
@@ -238,10 +241,19 @@ class Main:
                 y_pred = self.model(input_x_padded.to(self.device), styles).squeeze()[
                     :, i, :
                 ]
+
                 # Zero out the probability for the same as the previous chord
                 if i > 0:
                     for batch_idx, prev_chord in enumerate(x[:, i - 1]):
                         y_pred[batch_idx, prev_chord] = -torch.inf
+
+                # For the start of sequence token
+                y_pred[:, self.VOCAB_SIZE - 2] = -torch.inf
+
+                # Zero out the probability for the end of sequence token
+                if i == 0:
+                    y_pred[:, self.VOCAB_SIZE - 1] = -torch.inf
+
                 # Sample from the distribution
                 y_pred = torch.softmax(y_pred, dim=-1) ** (1 / temperature)
                 x[:, i] = y_pred.multinomial(1).squeeze()

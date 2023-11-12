@@ -198,10 +198,19 @@ class Main:
                 input_x_padded = self._pad(input_x).long()
 
                 y_pred = self.model(input_x_padded.to(self.device)).squeeze()[:, i, :]
+
                 # Zero out the probability for the same as the previous chord
                 if i > 0:
                     for batch_idx, prev_chord in enumerate(x[:, i - 1]):
                         y_pred[batch_idx, prev_chord] = -torch.inf
+
+                # For the start of sequence token
+                y_pred[:, self.VOCAB_SIZE - 2] = -torch.inf
+
+                # Zero out the probability for the end of sequence token
+                if i == 0:
+                    y_pred[:, self.VOCAB_SIZE - 1] = -torch.inf
+
                 # Sample from the distribution
                 y_pred = torch.softmax(y_pred, dim=-1) ** (1 / temperature)
                 x[:, i] = y_pred.multinomial(1).squeeze()
