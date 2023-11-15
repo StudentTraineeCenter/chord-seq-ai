@@ -7,6 +7,8 @@ class Main:
     def __init__(self, parser):
         with open("../Data/token_to_chord.json", "r") as fp:
             self.token_to_chord = json.load(fp)
+        # Convert the dictionary keys to integers
+        self.token_to_chord = {int(k): v for k, v in self.token_to_chord.items()}
 
         self.VOCAB_SIZE = len(self.token_to_chord) + 2
         self.parser = parser
@@ -34,7 +36,9 @@ class Main:
             if i == self.VOCAB_SIZE - 1:
                 break
             if i != self.VOCAB_SIZE - 2:
-                chords.append(self.token_to_chord[i.item()])
+                possible_chords = self.token_to_chord[i.item()]
+                # Use the shortest chord symbol
+                chords.append(min(possible_chords, key=len))
         return " | ".join(chords)
 
     def play_seq(self, seq):
@@ -47,7 +51,7 @@ class Main:
                 continue
 
             root, ext = self.parser.get_root_and_ext(
-                self.token_to_chord[chord].replace(" ", "")
+                min(self.token_to_chord[chord], key=len).replace(" ", "")
             )
             ext = self.parser.update_if_slash(root, ext)
             notes = self.chord_to_notes[root + ext]

@@ -70,13 +70,8 @@ class ConditionalTransformer(nn.Module):
         self.pe[:, 1::2] = torch.cos(pos * div_term)
 
     def generate_square_subsequent_mask(self, size):
-        """Generate a mask to avoid using future tokens."""
-        mask = (torch.triu(torch.ones(size, size)) == 1).transpose(0, 1)
-        mask = (
-            mask.float()
-            .masked_fill(mask == 0, float("-inf"))
-            .masked_fill(mask == 1, float(0.0))
-        )
+        """Generate a boolean mask to avoid attending to future tokens."""
+        mask = torch.triu(torch.ones(size, size), diagonal=1).bool()
         return mask
 
     def forward(self, x, style):
@@ -168,7 +163,7 @@ class Main:
         )
         self.model.load_state_dict(
             torch.load(
-                f"../Models/CondTransformer{model_type.capitalize()[0]}.pt",
+                f"../Models/ConditionalTransformer{model_type.capitalize()[0]}.pt",
                 map_location=self.device,
             )
         )
