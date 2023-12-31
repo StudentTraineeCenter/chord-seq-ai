@@ -9,6 +9,33 @@ class Main:
             " "
         )
 
+        # Create a map of notes to their enharmonic equivalents
+        mods = ["--", "-", "", "#", "##"]
+        note_names = ["C", "D", "E", "F", "G", "A", "B"]
+        all_notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+        self.note_map = {}
+        for note in note_names:
+            for mod in mods:
+                p = m21.pitch.Pitch(note + mod)
+                enharmonics = p.getAllCommonEnharmonics()
+                enharmonics.append(p)
+                for enh in enharmonics:
+                    enh = str(enh)
+                    if enh in all_notes:
+                        self.note_map[note + mod] = enh
+
+        # Does not also add C-- and F--
+        self.note_map["C--"] = "A#"
+        self.note_map["F--"] = "D#"
+
+        # Create a map of notes to their enharmonic equivalents
+        self.inverse_note_map = {}
+        for key, val in self.note_map.items():
+            if val not in self.inverse_note_map:
+                self.inverse_note_map[val] = [key]
+            else:
+                self.inverse_note_map[val].append(key)
+
         # Define a map for slash chords
         self.slash_map = {}
         for root in self.notes:
@@ -40,14 +67,16 @@ class Main:
 
         if "/" in extension:
             roman_numeral = extension.split("/")[1]
-            root_formatted = root.replace("b", "-")
+            root_formatted = self.note_map[root.replace("b", "-")]
+            root_equivs = self.inverse_note_map[root_formatted]
 
             # Find the matching bass note for the roman numeral
             for slash_pair, figure in self.slash_map.items():
                 slash_root, slash_bass = slash_pair.split("/")
-                if figure == roman_numeral and slash_root == root_formatted:
-                    bass_note = slash_bass.replace("-", "b")
-                    extension = extension.split("/")[0] + "/" + bass_note
+                if figure == roman_numeral and slash_root in root_equivs:
+                    extension = (
+                        extension.split("/")[0] + "/" + self.note_map[slash_bass]
+                    )
                     break
         return extension
 
